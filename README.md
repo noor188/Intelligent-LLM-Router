@@ -1,40 +1,55 @@
-# Next.js Template
+# LLM Router 
 
-This is a template repository showcasing Next.js Server Actions, React Server Components, and modern data fetching patterns. The project includes a Todo list implementation and examples of API integration with proper loading states and error handling.
+An intelligent LLM Router that automatically directs user prompts to the most cost-effective LLM based on task type and preference needs
 
-## Features
+## ✨ Features
 
-- **Todo List**: Server-side data mutations using Next.js Server Actions
-- **Data Fetching Example**: Demonstrates React Suspense and loading states
-- **Modern UI**: Built with Shadcn UI components and Tailwind CSS
-- **Error Handling**: Proper error boundaries and user feedback
-- **Type Safety**: Full TypeScript support
+- A routing function that classifies prompt types and sends them to the most cost effective LLM
+- A web app that lets users test prompts and view model selection, latency, and cost per request
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- [Next.js](https://nextjs.org) - React framework
-- [Shadcn UI](https://ui.shadcn.com/) - Component library
-- [Tailwind CSS](https://tailwindcss.com) - Styling
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- React  
+- Next.js  
+- JavaScript  
+- REST APIs  
+- LLM (Large Language Models)
 
-## Getting Started
+## System Design
+<img src="https://github.com/noor188/LLM-Router/blob/main/img/System_Design.png">
 
-1. Clone the repository
+## 🔐 Environment Variables
+
+Create a `.env` file in the `LLM-Router` directory with the following values:
+
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+```
+## 📦 Installation
+
+Follow these steps to install and run the project locally:
+
+1. Clone the repository:
+   
+```
+git clone https://github.com/noor188/LLM-Router.git
+cd LLM-Router
+```
+
 2. Install dependencies:
-
-```bash
+```
 npm install
 # or
 yarn install
-# or
-pnpm install
 ```
 
-3. Set up your environment variables in the `.env` file.
+3. Add environment variables:
 
-4. Start the development server:
+Create a .env file in the root directory and copy the environment variable keys from above.
 
-```bash
+4. Run the development server:
+
+```
 npm run dev
 # or
 yarn dev
@@ -42,26 +57,15 @@ yarn dev
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
+5. Visit your app:
 
-## Project Structure
+Open your browser and go to http://localhost:3000
 
-- `app/page.tsx` - Main page with Todo list implementation
-- `app/example/page.tsx` - Data fetching example with loading states
-- `app/actions/*` - Server Actions for data mutations
-- `components/ui/*` - Shadcn UI components
+## Demo
+<a href="https://youtu.be/4MoRUPKu5jM?si=vQCF0fWWQEO1GOOG"> Youtube Video</a>
 
-## Learn More
+## 🧠 Future Improvements
+- Add customizable routing rules so users can prioritize cost, latency, or quality depending on their needs
+- Run routing function through an evaluation set and optimize performance
 
-To learn more about the technologies used in this project:
 
-- [Next.js Documentation](https://nextjs.org/docs) - Next.js features and API
-- [Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions) - Learn about Next.js Server Actions
-- [Shadcn UI Documentation](https://ui.shadcn.com) - Learn about Shadcn UI components
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs) - Learn about Tailwind CSS
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
-
-Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
