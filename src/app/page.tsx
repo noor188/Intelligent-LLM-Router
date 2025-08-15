@@ -1,105 +1,191 @@
-import Image from "next/image";
-import { TodoList } from "./components/TodoList";
-import { fetchTodos } from "./actions/fetchData";
+"use client";
 
-export default async function Home() {
-  const todos = await fetchTodos();
+import React, { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+
+type Message = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  time?: string;
+};
+
+export default function Page() {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "m-1",
+      role: "assistant",
+      text: "Hello — I\u2019m your assistant. Ask me anything.",
+      time: new Date().toLocaleTimeString(),
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    // auto-scroll to bottom when messages change
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    const text = input.trim();
+    if (!text) return;
+
+    setError(null);
+
+    const userMessage: Message = {
+      id: `u-${Date.now()}`,
+      role: "user",
+      text,
+      time: new Date().toLocaleTimeString(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      // This project has a simple example GET handler at /api/chat that returns example data.
+      // We call it and then synthesize a short assistant reply from the returned JSON.
+      const res = await fetch("/api/chat");
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      const data = await res.json();
+
+      // Create a fallback reply from the example data.
+      const first = Array.isArray(data) && data.length > 0 ? data[0] : null;
+      const replyText = first?.description
+        ? first.description
+        : typeof data === "string"
+        ? data
+        : "I couldn't generate a reply from the server example."
+        ;
+
+      const assistantMessage: Message = {
+        id: `a-${Date.now()}`,
+        role: "assistant",
+        text: replyText,
+        time: new Date().toLocaleTimeString(),
+      };
+
+      // Append assistant reply
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `a-err-${Date.now()}`,
+          role: "assistant",
+          text: "Sorry, I couldn't reach the server. Try again.",
+          time: new Date().toLocaleTimeString(),
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!loading) sendMessage();
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([
+      {
+        id: "m-1",
+        role: "assistant",
+        text: "Hello — I\u2019m your assistant. Ask me anything.",
+        time: new Date().toLocaleTimeString(),
+      },
+    ]);
+    setError(null);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-black">
-      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col items-center justify-center space-y-8 text-center">
-          <Image
-            className="dark:invert"
-            src="/next.svg"
-            alt="Next.js Logo"
-            width={180}
-            height={38}
-            priority
-          />
-
-          <div className="max-w-2xl">
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Next.js Server Actions Demo
-            </h1>
-            <p className="mt-4 text-lg text-zinc-400">
-              This is a demonstration of Next.js Server Actions for data
-              mutation. Try adding and toggling todos - all changes are handled
-              by server actions.
-            </p>
-            <a
-              href="/example"
-              className="mt-8 inline-flex items-center justify-center rounded-lg bg-white/[0.1] px-4 py-2 text-sm font-medium text-white hover:bg-white/[0.15] transition-colors"
-            >
-              View Data Fetching Example →
-            </a>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="mt-16">
-          <div className="overflow-hidden rounded-2xl bg-white/[0.05] shadow-xl ring-1 ring-white/[0.1]">
-            <div className="p-6">
-              <TodoList initialTodos={todos} />
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-[#02102e] to-black p-6 md:p-12 text-white">
+      <div className="mx-auto max-w-3xl">
+        <Card className="bg-[rgba(8,12,20,0.6)] border-transparent backdrop-blur-sm">
+          <CardHeader>
+            <div className="flex flex-col">
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-white bg-clip-text text-transparent">
+                Chat
+              </CardTitle>
+              <div className="text-sm text-slate-300/80 mt-1">Talk to the assistant — replies are generated from the local example endpoint.</div>
             </div>
-          </div>
+          </CardHeader>
 
-          {/* Code Example */}
-          <div className="mt-8 rounded-lg bg-zinc-900 p-4">
-            <h3 className="text-sm font-medium text-zinc-400">How it works</h3>
-            <pre className="mt-2 overflow-x-auto text-sm text-zinc-300">
-              <code>{`// Server Action (app/actions/fetchData.ts)
-"use server"
+          <CardContent>
+            <div className="flex h-[60vh] max-h-[70vh] flex-col gap-4 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-4 py-4">
+                <div className="flex flex-col gap-4">
+                  {messages.map(msg => (
+                    <div
+                      key={msg.id}
+                      className={`flex items-start ${
+                        msg.role === "user" ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-lg ${
+                          msg.role === "user"
+                            ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white"
+                            : "bg-[rgba(255,255,255,0.03)] text-slate-200 border border-slate-800"
+                        }`}
+                      >
+                        <div className="whitespace-pre-wrap">{msg.text}</div>
+                        <div className="mt-1 text-[11px] opacity-50 text-right">{msg.time}</div>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={endRef} />
+                </div>
+              </div>
 
-async function toggleTodo(id: number) {
-  // Runs on the server
-  // Safe to access database
-  const todo = await db.todo.update(...)
-  return todo
-}`}</code>
-            </pre>
-          </div>
+              <div className="border-t border-slate-800 p-4">
+                <div className="flex items-center gap-3">
+                  <Input
+                    className="bg-[#071126] text-white placeholder:text-slate-400"
+                    placeholder={loading ? "Waiting for reply..." : "Type a message and press Enter"}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={loading}
+                  />
+                  <Button onClick={sendMessage} disabled={loading || !input.trim()}>
+                    {loading ? "Sending..." : "Send"}
+                  </Button>
+                  <Button variant="ghost" onClick={clearChat}>
+                    Clear
+                  </Button>
+                </div>
+                {error && (
+                  <div className="mt-2 text-sm text-red-400">{error}</div>
+                )}
+              </div>
+            </div>
+          </CardContent>
 
-          {/* Resources */}
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <a
-              href="https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group rounded-lg border border-white/[0.1] px-5 py-4 transition-colors hover:border-zinc-700 hover:bg-zinc-800/50"
-            >
-              <h2 className="mb-3 text-xl font-semibold text-white">
-                Documentation{" "}
-                <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-                  →
-                </span>
-              </h2>
-              <p className="text-sm text-zinc-400">
-                Learn more about Server Actions in the official Next.js
-                documentation.
-              </p>
-            </a>
-
-            <a
-              href="https://github.com/vercel/next.js/tree/canary/examples"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group rounded-lg border border-white/[0.1] px-5 py-4 transition-colors hover:border-zinc-700 hover:bg-zinc-800/50"
-            >
-              <h2 className="mb-3 text-xl font-semibold text-white">
-                Examples{" "}
-                <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-                  →
-                </span>
-              </h2>
-              <p className="text-sm text-zinc-400">
-                Discover more Next.js examples and starter templates.
-              </p>
-            </a>
-          </div>
-        </div>
+          <CardFooter>
+            <div className="text-sm text-muted-foreground">
+              This demo uses the local <code className="rounded bg-muted px-1 py-[2px]">/api/chat</code> example
+              endpoint for replies.
+            </div>
+          </CardFooter>
+        </Card>
       </div>
-    </div>
+    </main>
   );
 }
