@@ -14,7 +14,7 @@ import {
 type Message = {
   id: string;
   role: "user" | "assistant";
-  text: string;
+  content: string;
   time?: string;
 };
 
@@ -23,7 +23,7 @@ export default function Page() {
     {
       id: "m-1",
       role: "assistant",
-      text: "Hello — I\u2019m your assistant. Ask me anything.",
+      content: "Hello — I\u2019m your assistant. Ask me anything.",
       time: new Date().toLocaleTimeString(),
     },
   ]);
@@ -37,8 +37,10 @@ export default function Page() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  
   const sendMessage = async () => {
     const text = input.trim();
+    console.log(text);
     if (!text) return;
 
     setError(null);
@@ -46,47 +48,73 @@ export default function Page() {
     const userMessage: Message = {
       id: `u-${Date.now()}`,
       role: "user",
-      text,
+      content: text,
       time: new Date().toLocaleTimeString(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+  setMessages((prev: Message[]) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
     try {
       // This project has a simple example GET handler at /api/chat that returns example data.
       // We call it and then synthesize a short assistant reply from the returned JSON.
-      const res = await fetch("/api/chat");
+      const res = await fetch("/api/chat"
+        , {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify( userMessage ),
+      }
+      );
       if (!res.ok) throw new Error(`Server responded ${res.status}`);
       const data = await res.json();
 
-      // Create a fallback reply from the example data.
-      const first = Array.isArray(data) && data.length > 0 ? data[0] : null;
-      const replyText = first?.description
-        ? first.description
-        : typeof data === "string"
-        ? data
-        : "I couldn't generate a reply from the server example."
-        ;
+      // The API will return the final message. Support multiple shapes:
+      // - a plain string
+      // - an object like { message: '...' } or { text: '...' } or { reply: '...' }
+      // - fallback to previous example array shape
+      let replyText = "";
+      if (typeof data === "string") {
+        replyText = data;
+      } else if (data && typeof data === "object") {
+        replyText = (data.message as string) ?? (data.text as string) ?? (data.reply as string) ?? "";
+        if (!replyText && Array.isArray(data) && data.length > 0) {
+          replyText = data[0]?.description ?? JSON.stringify(data[0]);
+        }
+      }
+      if (!replyText) {
+        replyText = "I couldn't generate a reply from the server example.";
+      }
+
+      // Ensure replyText is a string. If the API returned an object, stringify it
+      // so React doesn't try to render an object directly.
+      if (typeof replyText !== "string") {
+        try {
+          replyText = JSON.stringify(replyText, null, 2);
+        } catch (e) {
+          replyText = String(replyText);
+        }
+      }
 
       const assistantMessage: Message = {
         id: `a-${Date.now()}`,
         role: "assistant",
-        text: replyText,
+        content: replyText,
         time: new Date().toLocaleTimeString(),
       };
 
       // Append assistant reply
-      setMessages(prev => [...prev, assistantMessage]);
+  setMessages((prev: Message[]) => [...prev, assistantMessage]);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
-      setMessages(prev => [
+  setMessages((prev: Message[]) => [
         ...prev,
         {
           id: `a-err-${Date.now()}`,
           role: "assistant",
-          text: "Sorry, I couldn't reach the server. Try again.",
+          content: "Sorry, I couldn't reach the server. Try again.",
           time: new Date().toLocaleTimeString(),
         },
       ]);
@@ -107,7 +135,7 @@ export default function Page() {
       {
         id: "m-1",
         role: "assistant",
-        text: "Hello — I\u2019m your assistant. Ask me anything.",
+        content: "Hello — I\u2019m your assistant. Ask me anything.",
         time: new Date().toLocaleTimeString(),
       },
     ]);
@@ -145,7 +173,7 @@ export default function Page() {
                             : "bg-[rgba(255,255,255,0.03)] text-slate-200 border border-slate-800"
                         }`}
                       >
-                        <div className="whitespace-pre-wrap">{msg.text}</div>
+                        <div className="whitespace-pre-wrap break-words">{typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)}</div>
                         <div className="mt-1 text-[11px] opacity-50 text-right">{msg.time}</div>
                       </div>
                     </div>

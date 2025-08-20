@@ -1,61 +1,107 @@
-import { NextResponse } from "next/server";
+import OpenAI from "openai";
+import { env } from "@/config/env";
 import { Logger } from "@/utils/logger";
 
-const logger = new Logger("API:Example");
+const logger = new Logger("Config:Env");
 
-// Example data
-const EXAMPLE_DATA = [
-  {
-    id: 1,
-    title: "Server-side Rendering",
-    description:
-      "Next.js automatically renders pages on the server for better performance.",
-    createdAt: "2024-01-01T00:00:00.000Z",
-  },
-  {
-    id: 2,
-    title: "API Routes",
-    description:
-      "Create API endpoints using file-system routing in the app/api directory.",
-    createdAt: "2024-01-02T00:00:00.000Z",
-  },
-  {
-    id: 3,
-    title: "Data Fetching",
-    description:
-      "Use React Server Components to fetch data directly on the server.",
-    createdAt: "2024-01-03T00:00:00.000Z",
-  },
-];
+const openai = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: env.OPENROUTER_API_KEY,
+})
 
-export async function GET(request: Request) {
-  try {
-    logger.info("GET /api/example - Request started");
+export async function POST( req: Request){
+  const messages = await req.json();
+  logger.info("Received messages:", messages);
 
-    // Log request details
-    const url = new URL(request.url);
-    logger.debug("Request details", {
-      method: request.method,
-      path: url.pathname,
-      searchParams: Object.fromEntries(url.searchParams),
+  const model = await llmRouter(messages.content);
+
+  return new Response(JSON.stringify({
+    message: model
+  }));
+
+  async function llmRouter(message: string){
+    const routingPrompt= `
+      You are an expert in selecting the best LLM model for a given message.
+
+      You are given a user's message and you need to determine which model to use to answer the message, 
+      based on the following criteria:
+      
+      - Price
+      - Latency
+      - Accuracy
+      - Context length
+      - Model capabilities
+
+      You have the following models available:
+      <models_available>
+      - openai/gpt-oss-20b:free
+        gpt-oss-20b is an open-weight 21B parameter model released by OpenAI under the Apache 2.0 license. 
+        It uses a Mixture-of-Experts (MoE) architecture with 3.6B active parameters per forward pass, 
+        optimized for lower-latency inference and deployability on consumer or single-GPU hardware. 
+        The model is trained in OpenAI’s Harmony response format and supports reasoning level configuration
+        , fine-tuning, and agentic capabilities including function calling, tool use, and structured 
+        outputs.
+        - 131,072 context window
+        - price: free
+        - Time to first token: 0.40s
+        - Throughput: 273.2 tokens/s
+
+      - anthropic/claude-sonnet-4
+        Claude Sonnet 4 significantly enhances the capabilities of its predecessor, Sonnet 3.7, excelling in both 
+        coding and reasoning tasks with improved precision and controllability. Achieving state-of-the-art performance
+        on SWE-bench (72.7%), Sonnet 4 balances capability and computational efficiency, making it suitable for a broad 
+        range of applications from routine coding tasks to complex software development projects. Key enhancements 
+        include improved autonomous codebase navigation, reduced error rates in agent-driven workflows, and increased 
+        reliability in following intricate instructions. Sonnet 4 is optimized for practical everyday use, providing
+        advanced reasoning capabilities while maintaining efficiency and responsiveness in diverse internal and external 
+        scenarios. Read more at the blog post here
+        - 200,00 context window
+        - price: $3/million input tokens, $15/millions output tokens
+        - Time to first token: 20.07s
+        - Throughput: 57 tokens/s
+
+      - openai/gpt-5-mini
+        GPT-5 Mini is a compact version of GPT-5, designed to handle lighter-weight reasoning tasks. It provides the same 
+        instruction-following and safety-tuning benefits as GPT-5, but with reduced latency and cost. GPT-5 Mini is the
+        successor to OpenAI's o4-mini model.
+        - 400,000 context window
+        - price: $0.25/million input tokens, $2/million output tokens
+        - Time to first token: 6.84s
+        - Throughput: 75.59 tokens/s
+        
+      </models_available>
+
+        Route the user's message to the best model 
+        based on the criteria above.
+
+        Here is the user's message:
+
+        <user_message>
+            ${message}
+        </user_message>
+
+        You need to return the model name in the following format:
+        {
+          "model": "model_name"
+        }   
+    `;
+    const response = await openai.chat.completions.create({
+      model: "openai/gpt-oss-20b:free",
+      messages: [
+        {
+          role: "user",
+          content: routingPrompt
+        }
+      ],
+      response_format: {type: "json_object"},
     });
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    logger.info("GET /api/example - Request completed successfully", {
-      itemCount: EXAMPLE_DATA.length,
-    });
-
-    return NextResponse.json(EXAMPLE_DATA);
-  } catch (error) {
-    logger.error("GET /api/example - Request failed", {
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
-
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    const parsedResponse = JSON.parse(response.choices[0].message.content || "{}");
+    return parsedResponse;
   }
+
+
+  return new Response(JSON.stringify({
+    message: "Hello, world!"
+  }));
 }
