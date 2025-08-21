@@ -80,8 +80,23 @@ export async function POST( req: Request){
         - price: $0.25/million input tokens, $2/million output tokens
         - Time to first token: 6.84s
         - Throughput: 75.59 tokens/s
+      
+      - model_name: qwen/qwen3-coder
+        Qwen3-Coder-480B-A35B-Instruct is a Mixture-of-Experts (MoE) code generation model 
+        developed by the Qwen team. It is optimized for agentic coding tasks such as function 
+        calling, tool use, and long-context reasoning over repositories. The model features 480 
+        billion total parameters, with 35 billion active per forward pass (8 out of 160 experts).
+        Pricing for the Alibaba endpoints varies by context length. Once a request is greater 
+        than 128k input tokens, the higher pricing is used.
+        - 262,144 context window
+        - price: $0.20/Million input tokens, $0.80/Million output tokens
+        - Time to first token: 1.91s
+        - Throughput: 92.18 tokens/s
 
-      - For code related questions, use anthropic/claude-sonnet-4
+      - For code related questions, determine if it's a complex coding task,
+      or a simple one:
+            - If it's a complex coding task, use anthropic/claude-sonnet-4
+            - If it's a simple coding task, use qwen/qwen3-coder
       - For non-code questions that require reasoning, use openai/gpt-5-mini
       - For non-code questions that don't require reasoning, use openai/gpt-oss-20b:free
 

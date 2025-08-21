@@ -193,14 +193,6 @@ export default function Page() {
                         }`}
                       >
                         <div className="whitespace-pre-wrap break-words">{typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)}</div>
-                        
-                        { msg.role === "assistant" && (
-                          <>
-                            <div className="mt-1 text-[11px] opacity-50 text-left">Model: {msg.model}</div>
-                            <div className="mt-1 text-[11px] opacity-50 text-left">Latency: {msg.latency}ms</div>
-                            <div className="mt-1 text-[11px] opacity-50 text-left">Cost: ${msg.cost}</div>
-                          </>
-                        )}                     
                         <div className="mt-1 text-[11px] opacity-50 text-right">{msg.time}</div>
                       </div>
                     </div>
