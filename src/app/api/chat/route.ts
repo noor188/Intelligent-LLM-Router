@@ -80,7 +80,11 @@ export async function POST( req: Request){
         - price: $0.25/million input tokens, $2/million output tokens
         - Time to first token: 6.84s
         - Throughput: 75.59 tokens/s
-        
+
+      - For code related questions, use anthropic/claude-sonnet-4
+      - For non-code questions that require reasoning, use openai/gpt-5-mini
+      - For non-code questions that don't require reasoning, use openai/gpt-oss-20b:free
+
       </models_available>
 
         Route the user's message to the best model 
