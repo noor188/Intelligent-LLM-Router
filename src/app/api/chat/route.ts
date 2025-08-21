@@ -11,12 +11,24 @@ const openai = new OpenAI({
 
 export async function POST( req: Request){
   const messages = await req.json();
-  logger.info("Received messages:", messages);
+  // logger.info("Received messages:", messages);
 
-  const model = await llmRouter(messages.content);
+  const { model, reasoning } = await llmRouter(messages.content);
+
+  const response = await openai.chat.completions.create({
+    model: model,
+    messages: [
+      {
+        role: "user",
+        content: messages.content
+      }
+    ]
+
+  })
 
   return new Response(JSON.stringify({
-    message: model
+    messages: `Model: ${model}
+    \n\n${response.choices[0].message.content}`
   }));
 
   async function llmRouter(message: string){
@@ -34,7 +46,7 @@ export async function POST( req: Request){
 
       You have the following models available:
       <models_available>
-      - openai/gpt-oss-20b:free
+      - model_name: openai/gpt-oss-20b:free
         gpt-oss-20b is an open-weight 21B parameter model released by OpenAI under the Apache 2.0 license. 
         It uses a Mixture-of-Experts (MoE) architecture with 3.6B active parameters per forward pass, 
         optimized for lower-latency inference and deployability on consumer or single-GPU hardware. 
@@ -46,7 +58,7 @@ export async function POST( req: Request){
         - Time to first token: 0.40s
         - Throughput: 273.2 tokens/s
 
-      - anthropic/claude-sonnet-4
+      - model_name: anthropic/claude-sonnet-4
         Claude Sonnet 4 significantly enhances the capabilities of its predecessor, Sonnet 3.7, excelling in both 
         coding and reasoning tasks with improved precision and controllability. Achieving state-of-the-art performance
         on SWE-bench (72.7%), Sonnet 4 balances capability and computational efficiency, making it suitable for a broad 
@@ -60,7 +72,7 @@ export async function POST( req: Request){
         - Time to first token: 20.07s
         - Throughput: 57 tokens/s
 
-      - openai/gpt-5-mini
+      - model_name: openai/gpt-5-mini
         GPT-5 Mini is a compact version of GPT-5, designed to handle lighter-weight reasoning tasks. It provides the same 
         instruction-following and safety-tuning benefits as GPT-5, but with reduced latency and cost. GPT-5 Mini is the
         successor to OpenAI's o4-mini model.
@@ -80,9 +92,10 @@ export async function POST( req: Request){
             ${message}
         </user_message>
 
-        You need to return the model name in the following format:
+        You need to return the model name in the following format, keep the model name as it is:
         {
-          "model": "model_name"
+          "model": openai/gpt-oss-20b:free || anthropic/claude-sonnet-4 || openai/gpt-5-mini
+          "reasoning": " 1 sentence to reasoning for the choice"
         }   
     `;
     const response = await openai.chat.completions.create({
@@ -96,12 +109,10 @@ export async function POST( req: Request){
       response_format: {type: "json_object"},
     });
 
+    logger.info("Generated response:", response);
+
     const parsedResponse = JSON.parse(response.choices[0].message.content || "{}");
     return parsedResponse;
   }
-
-
-  return new Response(JSON.stringify({
-    message: "Hello, world!"
-  }));
+  
 }

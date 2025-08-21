@@ -16,6 +16,9 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   time?: string;
+  model: string;
+  latency: number;
+  cost: number;
 };
 
 export default function Page() {
@@ -25,6 +28,9 @@ export default function Page() {
       role: "assistant",
       content: "Hello — I\u2019m your assistant. Ask me anything.",
       time: new Date().toLocaleTimeString(),
+      model: "",
+      latency: 0,
+      cost: 0,
     },
   ]);
   const [input, setInput] = useState("");
@@ -50,6 +56,9 @@ export default function Page() {
       role: "user",
       content: text,
       time: new Date().toLocaleTimeString(),
+      model: messages[messages.length - 1]?.model || "",
+      latency: messages[messages.length - 1]?.latency || 0,
+      cost: messages[messages.length -1]?.cost || 0,
     };
 
   setMessages((prev: Message[]) => [...prev, userMessage]);
@@ -70,6 +79,7 @@ export default function Page() {
       );
       if (!res.ok) throw new Error(`Server responded ${res.status}`);
       const data = await res.json();
+      console.log("Received data:", data);
 
       // The API will return the final message. Support multiple shapes:
       // - a plain string
@@ -103,6 +113,9 @@ export default function Page() {
         role: "assistant",
         content: replyText,
         time: new Date().toLocaleTimeString(),
+        model: data.message.model || "",
+        latency: data.latency || 0,
+        cost: data.cost || 0,
       };
 
       // Append assistant reply
@@ -116,6 +129,9 @@ export default function Page() {
           role: "assistant",
           content: "Sorry, I couldn't reach the server. Try again.",
           time: new Date().toLocaleTimeString(),
+          model: "",
+          latency: 0,
+          cost: 0,
         },
       ]);
     } finally {
@@ -137,6 +153,9 @@ export default function Page() {
         role: "assistant",
         content: "Hello — I\u2019m your assistant. Ask me anything.",
         time: new Date().toLocaleTimeString(),
+        model: "",
+        latency: 0,
+        cost: 0,
       },
     ]);
     setError(null);
@@ -174,6 +193,14 @@ export default function Page() {
                         }`}
                       >
                         <div className="whitespace-pre-wrap break-words">{typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)}</div>
+                        
+                        { msg.role === "assistant" && (
+                          <>
+                            <div className="mt-1 text-[11px] opacity-50 text-left">Model: {msg.model}</div>
+                            <div className="mt-1 text-[11px] opacity-50 text-left">Latency: {msg.latency}ms</div>
+                            <div className="mt-1 text-[11px] opacity-50 text-left">Cost: ${msg.cost}</div>
+                          </>
+                        )}                     
                         <div className="mt-1 text-[11px] opacity-50 text-right">{msg.time}</div>
                       </div>
                     </div>
